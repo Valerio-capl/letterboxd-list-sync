@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>list-sync</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <main class="panel">
+    <h1 class="title">Sync List</h1>
+    <p id="target" class="hint"></p>
+
+    <form id="sync-form" novalidate>
+      <label class="field" for="list-url">List Link</label>
+      <input id="list-url" class="input" type="url" placeholder="https://letterboxd.com/user/list/list-name/"
+        autocomplete="off" spellcheck="false">
+      <button id="sync-button" class="button" type="submit">Sync</button>
+    </form>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>
