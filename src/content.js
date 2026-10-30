@@ -40,6 +40,72 @@ class Content{
     return list;
   }
 
+  // get list settings for import form;
+  async getListSettings(listUrl = this.BaseUrl) {
+    const baseUrl = this._fixUrl(listUrl);
+    if (!baseUrl) throw new Error(`Not a Letterboxd URL: ${listUrl}`);
+    const dom = await this._fetchHtml(`${baseUrl}edit/`);
+    const settings = {};
+    const missing = [];
+
+    const reactDiv = dom.querySelector('div.react-component[data-component-class="ListEditor"]');
+    if (reactDiv && reactDiv.dataset.listName !== undefined) {
+      const data = reactDiv.dataset;
+      settings.name = data.listName;
+      settings.notes = data.listDescription || "";
+      const listType = data.listType || "public";
+      const sharePolicy = data.listSharePolicy || "Anyone";
+      
+      if (listType === "private") {
+        settings.publicList = false;
+        settings.sharePolicy = sharePolicy;
+      } else {
+        settings.publicList = true;
+        settings.sharePolicy = "Anyone";
+      }
+      settings.numberedList = data.listRanked === "true" || data.listNumbered === "true";
+      if (!settings.name.trim()) {
+        throw new Error("Unable to read the list name");
+      }
+      return settings;
+    }
+
+    const form = dom.querySelector('[name="notes"]')?.closest("form") ?? dom;
+    for (const field of ["name", "notes", "numberedList"]) {
+      const value = this._readField(form, field);
+      if (value === null || (field === "name" && !value.trim())) missing.push(field);
+      settings[field] = value;
+    }
+
+    const sharingValue = this._readField(form, "sharing");
+    if (!sharingValue) {
+      missing.push("sharing policy");
+    } else {
+      settings.publicList = (sharingValue === "Public");
+      settings.sharePolicy = (sharingValue === "Public") ? "Anyone" : sharingValue;
+    }
+    if (missing.length > 0) {
+      throw new Error(`Unable to read list settings (${missing.join(", ")})`);
+    }
+    
+    return settings;
+  }
+
+  _readField(root, fieldName) {
+    const fields = [...root.querySelectorAll(`[name="${fieldName}"]`)];
+    if (fields.length === 0) return null;
+
+    const select = fields.find(field => field.tagName === "SELECT");
+    if (select) return select.value;
+
+    const checkbox = fields.find(field => field.type === "checkbox");
+    if (checkbox) return checkbox.hasAttribute("checked");
+
+    const radios = fields.filter(field => field.type === "radio");
+    if (radios.length > 0) return radios.find(radio => radio.hasAttribute("checked"))?.value ?? null;
+    return fields[0]?.value ?? fields[0]?.textContent ?? null;
+  }
+
   // fills the map in place, return number of skipped films;
   _fillList(dom, FilmList){
     let skipped = 0;
@@ -129,10 +195,16 @@ class Content{
   }
 
   _fixUrl(rawUrl) {
-    const url = new URL(rawUrl);
-    let path = url.pathname.replace(/\/page\/\d+\/?$/, "");
-    path = path.replace(/\/+$/, "") + "/";
-    return `${url.origin}${path}`;
+    try {
+      const url = new URL(rawUrl);
+      let path = url.pathname
+        .replace(/\/edit\/?$/, "")
+        .replace(/\/page\/\d+\/?$/, "")
+        .replace(/\/+$/, "");
+      return `${url.origin}${path}/`;
+    } catch {
+      return null;
+    }
   }
 
   async _fetchHtml(url) {
