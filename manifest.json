@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Letterboxd List Sync",
+  "version": "0.1.0",
+  "description": "Adds to a Letterboxd list the films that are missing compared to a source list.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Letterboxd List Sync"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://letterboxd.com/*"
+      ],
+      "js": [
+        "src/content.js",
+        "src/sync.js",
+        "src/csv.js",
+        "src/import.js",
+        "main.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
